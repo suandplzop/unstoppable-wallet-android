@@ -3,7 +3,6 @@ package io.horizontalsystems.bankwallet.modules.market.favorites
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.horizontalsystems.bankwallet.core.subscribeIO
 import io.horizontalsystems.bankwallet.entities.DataState
 import io.horizontalsystems.bankwallet.entities.ViewState
 import io.horizontalsystems.bankwallet.modules.market.MarketField
@@ -15,6 +14,7 @@ import io.horizontalsystems.bankwallet.modules.market.favorites.MarketFavoritesM
 import io.horizontalsystems.bankwallet.ui.compose.Select
 import io.reactivex.disposables.CompositeDisposable
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 class MarketFavoritesViewModel(
@@ -41,21 +41,23 @@ class MarketFavoritesViewModel(
     val sortingFieldSelectorStateLiveData = MutableLiveData<SelectorDialogState>()
 
     init {
-        service.marketItemsObservable
-            .subscribeIO { state ->
-                loadingLiveData.postValue(state == DataState.Loading)
+        viewModelScope.launch {
+            service.marketItemsFlow
+                .collect { state ->
+                    loadingLiveData.postValue(state == DataState.Loading)
 
-                when (state) {
-                    is DataState.Success -> {
-                        viewStateLiveData.postValue(ViewState.Success)
-                        marketItems = state.data
-                        syncViewItem()
-                    }
-                    is DataState.Error -> {
-                        viewStateLiveData.postValue(ViewState.Error(state.error))
+                    when (state) {
+                        is DataState.Success -> {
+                            viewStateLiveData.postValue(ViewState.Success)
+                            marketItems = state.data
+                            syncViewItem()
+                        }
+                        is DataState.Error -> {
+                            viewStateLiveData.postValue(ViewState.Error(state.error))
+                        }
                     }
                 }
-            }.let { disposables.add(it) }
+        }
 
         service.start()
     }

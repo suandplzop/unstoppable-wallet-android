@@ -6,9 +6,10 @@ import io.horizontalsystems.bankwallet.modules.market.MarketItem
 import io.horizontalsystems.bankwallet.modules.market.SortingField
 import io.horizontalsystems.core.BackgroundManager
 import io.horizontalsystems.core.ICurrencyManager
-import io.reactivex.Observable
 import io.reactivex.disposables.Disposable
-import io.reactivex.subjects.BehaviorSubject
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 
 class MarketFavoritesService(
     private val repository: MarketFavoritesRepository,
@@ -20,10 +21,8 @@ class MarketFavoritesService(
     private var repositoryDisposable: Disposable? = null
     private var currencyManagerDisposable: Disposable? = null
 
-    private val marketItemsSubject: BehaviorSubject<DataState<List<MarketItem>>> =
-        BehaviorSubject.createDefault(DataState.Loading)
-    val marketItemsObservable: Observable<DataState<List<MarketItem>>>
-        get() = marketItemsSubject
+    private val marketItemsMutableFlow = MutableStateFlow<DataState<List<MarketItem>>>(DataState.Loading)
+    val marketItemsFlow = marketItemsMutableFlow.asStateFlow()
 
     val sortingFieldTypes = SortingField.values().toList()
     var sortingField: SortingField = menuService.sortingField
@@ -38,12 +37,18 @@ class MarketFavoritesService(
 
         repository.get(sortingField, currencyManager.baseCurrency, forceRefresh)
             .doOnSubscribe {
-                marketItemsSubject.onNext(DataState.Loading)
+                marketItemsMutableFlow.update {
+                    DataState.Loading
+                }
             }
             .subscribeIO({ marketItems ->
-                marketItemsSubject.onNext(DataState.Success(marketItems))
+                marketItemsMutableFlow.update {
+                    DataState.Success(marketItems)
+                }
             }, { error ->
-                marketItemsSubject.onNext(DataState.Error(error))
+                marketItemsMutableFlow.update {
+                    DataState.Error(error)
+                }
             }).let {
                 favoritesDisposable = it
             }
