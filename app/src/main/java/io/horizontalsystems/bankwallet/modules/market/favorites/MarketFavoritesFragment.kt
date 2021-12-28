@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -69,15 +68,15 @@ fun MarketFavoritesScreen(
     viewModel: MarketFavoritesViewModel,
     onCoinClick: (String) -> Unit
 ) {
-    val viewState by viewModel.viewStateLiveData.observeAsState()
-    val loading by viewModel.loadingLiveData.observeAsState(false)
-    val isRefreshing by viewModel.isRefreshingLiveData.observeAsState(false)
-    val marketFavoritesData by viewModel.viewItemLiveData.observeAsState()
-    val sortingFieldDialogState by viewModel.sortingFieldSelectorStateLiveData.observeAsState()
+    val viewState = viewModel.viewState
+    val loading = viewModel.loading
+    val isRefreshing = viewModel.isRefreshing
+    val marketFavoritesData = viewModel.marketFavoritesData
+    val sortingFieldDialogState = viewModel.sortingFieldSelectorState
     var scrollToTopAfterUpdate by rememberSaveable { mutableStateOf(false) }
 
     HSSwipeRefresh(
-        state = rememberSwipeRefreshState(isRefreshing ?: false || loading ?: false),
+        state = rememberSwipeRefreshState(isRefreshing || loading),
         onRefresh = {
             viewModel.refresh()
         }

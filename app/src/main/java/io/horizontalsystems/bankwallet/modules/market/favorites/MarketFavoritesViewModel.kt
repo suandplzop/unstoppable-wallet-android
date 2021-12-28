@@ -1,6 +1,8 @@
 package io.horizontalsystems.bankwallet.modules.market.favorites
 
-import androidx.lifecycle.MutableLiveData
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.horizontalsystems.bankwallet.entities.DataState
@@ -34,26 +36,31 @@ class MarketFavoritesViewModel(
     private val sortingFieldSelect: Select<SortingField>
         get() = Select(service.sortingField, service.sortingFieldTypes)
 
-    val viewStateLiveData = MutableLiveData<ViewState>()
-    val loadingLiveData = MutableLiveData<Boolean>()
-    val isRefreshingLiveData = MutableLiveData<Boolean>()
-    val viewItemLiveData = MutableLiveData<ViewItem>()
-    val sortingFieldSelectorStateLiveData = MutableLiveData<SelectorDialogState>()
+    var viewState by mutableStateOf<ViewState?>(null)
+        private set
+    var loading by mutableStateOf(false)
+        private set
+    var isRefreshing by mutableStateOf(false)
+        private set
+    var marketFavoritesData by mutableStateOf<ViewItem?>(null)
+        private set
+    var sortingFieldSelectorState by mutableStateOf<SelectorDialogState?>(null)
+        private set
 
     init {
         viewModelScope.launch {
             service.marketItemsFlow
                 .collect { state ->
-                    loadingLiveData.postValue(state == DataState.Loading)
+                    loading = state == DataState.Loading
 
                     when (state) {
                         is DataState.Success -> {
-                            viewStateLiveData.postValue(ViewState.Success)
+                            viewState = ViewState.Success
                             marketItems = state.data
                             syncViewItem()
                         }
                         is DataState.Error -> {
-                            viewStateLiveData.postValue(ViewState.Error(state.error))
+                            viewState = ViewState.Error(state.error)
                         }
                     }
                 }
@@ -65,21 +72,19 @@ class MarketFavoritesViewModel(
     private fun refreshWithMinLoadingSpinnerPeriod() {
         service.refresh()
         viewModelScope.launch {
-            isRefreshingLiveData.postValue(true)
+            isRefreshing = true
             delay(1000)
-            isRefreshingLiveData.postValue(false)
+            isRefreshing = false
         }
     }
 
     private fun syncViewItem() {
-        viewItemLiveData.postValue(
-            ViewItem(
-                sortingFieldSelect,
-                marketFieldSelect,
-                marketItems.map {
-                    MarketViewItem.create(it, marketField)
-                }
-            )
+        marketFavoritesData = ViewItem(
+            sortingFieldSelect,
+            marketFieldSelect,
+            marketItems.map {
+                MarketViewItem.create(it, marketField)
+            }
         )
     }
 
@@ -92,12 +97,12 @@ class MarketFavoritesViewModel(
     }
 
     fun onClickSortingField() {
-        sortingFieldSelectorStateLiveData.postValue(SelectorDialogState.Opened(sortingFieldSelect))
+        sortingFieldSelectorState = SelectorDialogState.Opened(sortingFieldSelect)
     }
 
     fun onSelectSortingField(sortingField: SortingField) {
         service.sortingField = sortingField
-        sortingFieldSelectorStateLiveData.postValue(SelectorDialogState.Closed)
+        sortingFieldSelectorState = SelectorDialogState.Closed
     }
 
     fun onSelectMarketField(marketField: MarketField) {
@@ -107,7 +112,7 @@ class MarketFavoritesViewModel(
     }
 
     fun onSortingFieldDialogDismiss() {
-        sortingFieldSelectorStateLiveData.postValue(SelectorDialogState.Closed)
+        sortingFieldSelectorState = SelectorDialogState.Closed
     }
 
     override fun onCleared() {
