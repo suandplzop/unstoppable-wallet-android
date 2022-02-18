@@ -218,9 +218,6 @@ class App : CoreApp(), WorkConfiguration.Provider  {
         wc1RequestManager = WC1RequestManager()
         wc1Manager = WC1Manager(accountManager, ethereumKitManager, binanceSmartChainKitManager)
 
-        wc2Service = WC2Service()
-        wc2SessionManager = WC2SessionManager(accountManager, WC2SessionStorage(appDatabase), wc2Service)
-
         termsManager = TermsManager(localStorage)
 
         marketFavoritesManager = MarketFavoritesManager(appDatabase)
@@ -254,6 +251,9 @@ class App : CoreApp(), WorkConfiguration.Provider  {
         startTasks()
 
         initializeWalletConnectV2(appConfig)
+
+        wc2Service = WC2Service()
+        wc2SessionManager = WC2SessionManager(accountManager, WC2SessionStorage(appDatabase), wc2Service)
     }
 
     private fun initializeWalletConnectV2(appConfig: AppConfigProvider) {
