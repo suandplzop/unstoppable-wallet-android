@@ -1,9 +1,12 @@
 package io.horizontalsystems.bankwallet.modules.nft
 
 import io.horizontalsystems.bankwallet.entities.Account
+import io.horizontalsystems.bankwallet.entities.AccountType
 import io.horizontalsystems.bankwallet.entities.Address
 import io.horizontalsystems.bankwallet.modules.opensea.OpenSeaApiV1Response
 import io.horizontalsystems.bankwallet.modules.opensea.OpenSeaModule
+import io.horizontalsystems.ethereumkit.core.EthereumKit
+import io.horizontalsystems.ethereumkit.core.signer.Signer
 import io.horizontalsystems.marketkit.models.CoinType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -26,7 +29,8 @@ class NftManager(private val nftDao: NftDao) {
             }.toMap()
         }
 
-    suspend fun refresh(account: Account, address: Address) = withContext(Dispatchers.IO) {
+    suspend fun refresh(account: Account) = withContext(Dispatchers.IO) {
+        val address = getAddress(account)
         val collections = fetchCollections(address).map { collectionResponse ->
             NftCollection(
                 accountId = account.id,
@@ -58,6 +62,16 @@ class NftManager(private val nftDao: NftDao) {
         }
 
         nftDao.replaceCollectionAssets(account.id, collections, assets)
+    }
+
+    private fun getAddress(account: Account): Address {
+        val addressStr = when (val type = account.type) {
+            is AccountType.Address -> type.address
+            is AccountType.Mnemonic -> Signer.address(type.seed, EthereumKit.NetworkType.EthMainNet).hex
+            else -> throw Exception("Not Supported")
+        }
+
+        return Address(addressStr)
     }
 
     private fun getCoinTypeId(paymentTokenAddress: String): String {

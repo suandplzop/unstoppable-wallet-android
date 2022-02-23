@@ -57,7 +57,7 @@ class NftCollectionsService(
 
     suspend fun refresh() {
         accountManager.activeAccount?.let { account ->
-            nftManager.refresh(account, getAddress(account))
+            nftManager.refresh(account)
         }
     }
 
@@ -75,7 +75,7 @@ class NftCollectionsService(
             }
 
             coroutineScope.launch {
-                nftManager.refresh(account, getAddress(account))
+                nftManager.refresh(account)
             }
         } else {
             _collectionItems.update {
@@ -112,16 +112,6 @@ class NftCollectionsService(
                 DataState.Success(list)
             }
         }
-    }
-
-    private fun getAddress(account: Account): Address {
-        val addressStr = when (val type = account.type) {
-            is AccountType.Address -> type.address
-            is AccountType.Mnemonic -> Signer.address(type.seed, EthereumKit.NetworkType.EthMainNet).hex
-            else -> throw Exception("Not Supported")
-        }
-
-        return Address(addressStr)
     }
 
     private fun unsubscribeFromCollectionAssetUpdates() {
